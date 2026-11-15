@@ -12,15 +12,12 @@ jobs:
       - name: Install cross-compiler
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Clean and Configure U-Boot
+      - name: Configure U-Boot
         run: |
-          make distclean
-          rm -rf .output
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm64 dizi_defconfig
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm dizi_defconfig
 
       - name: Build U-Boot
-        run: |
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm64 -j$(nproc)
+        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm -j$(nproc)
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
