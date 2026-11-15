@@ -1,8 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0+
-/*
- * Minimal Device Tree include for Qualcomm SM7435 (Snapdragon 7s Gen 2)
- */
-
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -13,32 +9,10 @@
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
-
 		CPU0: cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
-			enable-method = "psci";
-		};
-
-		CPU1: cpu@100 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x100>;
-			enable-method = "psci";
-		};
-
-		CPU2: cpu@200 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x200>;
-			enable-method = "psci";
-		};
-
-		CPU3: cpu@300 {
-			device_type = "cpu";
-			compatible = "arm,armv8";
-			reg = <0x0 0x300>;
 			enable-method = "psci";
 		};
 	};
@@ -66,24 +40,15 @@
 			compatible = "arm,gic-v3";
 			#interrupt-cells = <3>;
 			interrupt-controller;
-			reg = <0x17a00000 0x10000>, /* GICD */
-			      <0x17b00000 0x100000>; /* GICR */
+			reg = <0x17a00000 0x10000>,
+			      <0x17b00000 0x100000>;
 		};
 
-		geniqup@9c0000 {
-			compatible = "qcom,geni-se-qup";
-			reg = <0x9c0000 0x6000>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
-
-			serial@998000 {
-				compatible = "qcom,geni-debug-uart";
-				reg = <0x998000 0x4000>;
-				interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
-				clock-frequency = <7372800>;
-				status = "okay";
-			};
+		uart0: serial@998000 {
+			compatible = "qcom,geni-debug-uart";
+			reg = <0x998000 0x4000>;
+			clock-frequency = <7372800>;
+			status = "okay";
 		};
 	};
 };
