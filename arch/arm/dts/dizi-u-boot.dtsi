@@ -6,8 +6,8 @@
 		#size-cells = <2>;
 		ranges;
 
-		framebuffer_reserved: framebuffer@9d400000 {
-			reg = <0x0 0x9d400000 0x0 0x1000000>; /* 16MB */
+		framebuffer_reserved: framebuffer@a0000000 {
+			reg = <0x0 0xa0000000 0x0 0x1000000>; /* 16MB на адресе A0000000 */
 			no-map;
 		};
 	};
