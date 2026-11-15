@@ -15,7 +15,6 @@
 #include <linux/usb/ch9.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
-#include <linux/workqueue.h>
 
 struct usb_ep;
 
