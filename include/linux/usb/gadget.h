@@ -1,9 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * <linux/usb/gadget.h>
- *
- * We call the USB "gadget" API (for the "device" side of USB) the
- * master/slave API. The slave side is the gadget.
  */
 
 #ifndef __LINUX_USB_GADGET_H
@@ -13,19 +10,13 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/usb/ch9.h>
-#include <linux/kernel.h>
 #include <linux/device.h>
+#include <linux/kernel.h>
 
 struct usb_ep;
 
 /**
  * struct usb_ep_caps - endpoint capabilities description
- * @type_control: Endpoint supports control type
- * @type_iso: Endpoint supports isochronous type
- * @type_bulk: Endpoint supports bulk type
- * @type_int: Endpoint supports interrupt type
- * @dir_in: Endpoint supports IN direction
- * @dir_out: Endpoint supports OUT direction
  */
 struct usb_ep_caps {
 	unsigned type_control:1;
@@ -38,21 +29,6 @@ struct usb_ep_caps {
 
 /**
  * struct usb_request - describes one i/o request
- * @buf: Buffer used for data.
- * @dma: DMA address for bulk/intr endpoints.
- * @length: Length of that data
- * @stream_id: The stream id, when USB3.0 bulk streams are being used
- * @no_interrupt: If true, hints that no completion irq is needed.
- * @zero: If true, when requests are loaded, they must sink a
- *	zero length packet (unless @length is zero) to terminate
- *	the transfer.
- * @short_not_ok: When read, causes a host controller to use
- *	short reads to terminate the transfer.
- * @complete: Completion handler.
- * @context: For use by the completion handler.
- * @list: For use by the host controller driver.
- * @status: For use by the host controller driver.
- * @actual: The number of bytes transferred.
  */
 struct usb_request {
 	void			*buf;
@@ -188,12 +164,7 @@ struct usb_gadget_ops {
 			struct usb_ss_ep_comp_descriptor *);
 
 	int	(*check_config)(struct usb_gadget *gadget);
-	/* readonly to gadget driver */
-	const struct usb_gadget_ops *ops;
 
-	/**
-	 * udc_set_speed - Chooses the maximum speed
-	 */
 	void	(*udc_set_speed)(struct usb_gadget *gadget,
 				 enum usb_device_speed);
 
@@ -207,7 +178,6 @@ struct usb_gadget_ops {
  * struct usb_gadget - represents a usb slave device
  */
 struct usb_gadget {
-	struct work_struct		work;
 	const struct usb_gadget_ops	*ops;
 	struct usb_ep			*ep0;
 	struct list_head		ep_list;
@@ -249,7 +219,7 @@ static inline size_t
 usb_ep_align_maybe(struct usb_gadget *g, struct usb_ep *ep, size_t len)
 {
 	if (g->quirk_ep0_mps_limit)
-		return roundup(len, ep->maxpacket);
+		return roundup(len, (unsigned int)ep->maxpacket);
 	else
 		return len;
 }
@@ -351,9 +321,6 @@ struct usb_gadget_driver {
 	void			(*suspend)(struct usb_gadget *);
 	void			(*resume)(struct usb_gadget *);
 	void			(*reset)(struct usb_gadget *);
-
-	/* FIXME support safe rmmod */
-	struct device_driver	driver;
 };
 
 /* ----------------------------------------------------------------------- */
