@@ -18,8 +18,8 @@ jobs:
         run: |
           make CROSS_COMPILE=aarch64-linux-gnu- O=.output dizi_defconfig
 
-      - name: Build U-Boot
-        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
+      - name: Build U-Boot Image
+        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc) u-boot.img
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
