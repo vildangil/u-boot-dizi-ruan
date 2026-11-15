@@ -2,8 +2,6 @@ name: Build U-Boot for Dizi (SM7435)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   build:
