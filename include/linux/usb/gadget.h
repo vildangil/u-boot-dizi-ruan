@@ -13,7 +13,7 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/usb/ch9.h>
-#include <linux/usb/ch11.h>
+/* #include <linux/usb/ch11.h> */  /* УДАЛЕНО: Файла нет в вашей версии U-Boot */
 
 struct usb_ep;
 
@@ -84,20 +84,6 @@ struct usb_ep_ops {
 
 /**
  * struct usb_ep - device side representation of USB endpoint
- * @name:identifier for the endpoint, such as "ep-a" or "ep1in-bulk"
- * @ops: Function pointers used to access hardware-specific operations.
- * @ep_list:the gadget's ep_list holds all of its endpoints
- * @maxpacket:The maximum packet size used on this endpoint.
- * @maxpacket_limit:The maximum packet size this endpoint can support.
- * @max_streams: The maximum number of streams supported
- *	by this endpoint.
- * @mult: ...
- * @caps: ...
- * @driver_data:for use by the hardware driver
- * @address: UDC address of the endpoint, or zero
- * @claimed: True if this endpoint is claimed by a function.
- * @comp_desc: In case of SuperSpeed support, this is the endpoint
- *	companion descriptor.
  */
 struct usb_ep {
 	void			*driver_data;
@@ -167,19 +153,6 @@ struct usb_dcd_config_params {
 
 /**
  * struct usb_gadget_ops - operations provided by a USB Device Controller
- * @get_frame: Returns the current frame number, or -EOPNOTSUPP.
- * @wakeup: Reports a remote wakeup.
- * @set_selfpowered: Sets the device selfpowered feature.
- * @vbus_session: Updates the controller's VBUS session state.
- * @vbus_draw: Updates the controller's VBUS draw state.
- * @pullup: Enables or disables the D+ pullup.
- * @ioctl: Used for device-specific requests.
- * @get_config_params: Passes the hardware's SuperSpeed configuration.
- * @udc_start: Prepares the controller for use with this gadget driver.
- * @udc_stop: Reverses @udc_start.
- * @match_ep: Called to match an endpoint.
- * @udc_set_speed: Called to set the maximum speed.
- * @udc_async_callbacks: Called to enable or disable asynchronous callbacks.
  */
 struct usb_gadget_ops {
 	int	(*get_frame)(struct usb_gadget *);
@@ -204,46 +177,18 @@ struct usb_gadget_ops {
 
 	/**
 	 * udc_set_speed - Chooses the maximum speed
-	 * @gadget: The gadget to set the speed for.
-	 * @speed: The speed to set.
 	 */
 	void	(*udc_set_speed)(struct usb_gadget *gadget,
 				 enum usb_device_speed);
 
 	/**
 	 * udc_async_callbacks - Enables or disables asynchronous callbacks.
-	 * @gadget: The gadget to configure.
-	 * @enable: True to enable, false to disable.
 	 */
 	void	(*udc_async_callbacks)(struct usb_gadget *gadget, bool enable);
 };
 
 /**
  * struct usb_gadget - represents a usb slave device
- * @work: (internal use) Workqueue to be used for sysfs_notify()
- * @ops: Function pointers used to access hardware-specific operations.
- * @ep0: Endpoint zero, used when reading or writing responses to
- *	driver setup() requests
- * @ep_list: List of other endpoints supported by the device.
- * @speed: Speed of current connection to USB host.
- * @max_speed: Maximal speed the UDC can handle.  UDC must support this
- *      and all slower speeds.
- * @state: the state we are now (attached, suspended, configured, etc)
- * @name: Identifies the controller hardware type.  Used in diagnostics
- *	and sometimes configuration.
- * @dev: Driver model state for this abstract device.
- * @out_epnum: last used out ep number
- * @in_epnum: last used in ep number
- * @is_dualspeed: true if the controller supports SuperSpeed or HighSpeed.
- * @is_otg: true if the USB device port uses a Mini-AB jack
- * @is_a_peripheral: true if the controller is in A-Peripheral mode.
- * @b_hnp_enable: OTG device feature flag, indicating that the A-Host
- *	enabled HNP support.
- * @a_hnp_support: OTG device feature flag, indicating that the A-Host
- *	supports HNP.
- * @a_alt_hnp_support: OTG device feature flag, indicating that the A-Host
- *	can use an alternate port for HNP.
- * @quirk_ep0_mps_limit: limit the max packet size of ep0.
  */
 struct usb_gadget {
 	struct work_struct		work;
@@ -281,20 +226,9 @@ static inline struct usb_gadget *dev_to_usb_gadget(struct device *dev)
 	return container_of(dev, struct usb_gadget, dev);
 }
 
-/* iterates the non-control endpoints; 'tmp' is a struct usb_ep pointer */
 #define gadget_for_each_ep(tmp, gadget) \
 	list_for_each_entry(tmp, &(gadget)->ep_list, ep_list)
 
-/**
- * usb_ep_align_maybe - returns @len aligned to ep's maxpacketsize if gadget
- *	requires quirk_ep0_mps_limit
- * @gadget: gadget whose maxpacketsize need adjusting
- * @ep: ep whose maxpacketsize need adjusting
- * @len: buffer size's length to align to @ep's maxpacketsize
- *
- * This helper function is specially useful for gadget zero, which support
- * both High Bandwidth and SuperSpeed endpoints.
- */
 static inline size_t
 usb_ep_align_maybe(struct usb_gadget *g, struct usb_ep *ep, size_t len)
 {
@@ -304,65 +238,31 @@ usb_ep_align_maybe(struct usb_gadget *g, struct usb_ep *ep, size_t len)
 		return len;
 }
 
-/**
- * gadget_is_dualspeed - return true if the hardware handles both speeds
- * @g: controller that might support both high and full speeds
- *
- * This is only for the gadget side.  Offically, the device side is
- * "full speed" or "high speed".  "Dual speed" is an invention of the
- * gadget framework.
- */
 static inline int gadget_is_dualspeed(struct usb_gadget *g)
 {
 	return g->is_dualspeed;
 }
 
-/**
- * gadget_is_superspeed() - return true if the hardware handles SuperSpeed
- * @g: controller that might support SuperSpeed
- */
 static inline int gadget_is_superspeed(struct usb_gadget *g)
 {
 	return g->max_speed >= USB_SPEED_SUPER;
 }
 
-/**
- * gadget_is_superspeed_plus() - return true if the hardware handles
- * SuperSpeed Plus
- * @g: controller that might support SuperSpeed Plus
- */
 static inline int gadget_is_superspeed_plus(struct usb_gadget *g)
 {
 	return g->max_speed >= USB_SPEED_SUPER_PLUS;
 }
 
-/**
- * gadget_is_otg - return true if the hardware understands OTG
- * @g: controller that might support OTG
- */
 static inline int gadget_is_otg(struct usb_gadget *g)
 {
 	return g->is_otg;
 }
 
-/**
- * usb_gadget_frame_number - returns the current frame number
- * @gadget: controller that reports the frame number
- *
- * Returns the usb frame number, or 0 if none could be read.
- */
 static inline int usb_gadget_frame_number(struct usb_gadget *gadget)
 {
 	return gadget->ops->get_frame(gadget);
 }
 
-/**
- * usb_gadget_wakeup - tries to wake up the host connected to this gadget
- * @gadget: controller used to wake up the host
- *
- * Returns zero on success, else negative error code if the hardware
- * doesn't support such attempts, or it in a state that can't wakeup.
- */
 static inline int usb_gadget_wakeup(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->wakeup)
@@ -370,15 +270,6 @@ static inline int usb_gadget_wakeup(struct usb_gadget *gadget)
 	return gadget->ops->wakeup(gadget);
 }
 
-/**
- * usb_gadget_set_selfpowered - sets the device selfpowered feature.
- * @gadget:the device being declared as self-powered
- *
- * this affects the device status reported by the hardware driver
- * to reflect that it now has a local power supply.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_set_selfpowered(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->set_selfpowered)
@@ -386,15 +277,6 @@ static inline int usb_gadget_set_selfpowered(struct usb_gadget *gadget)
 	return gadget->ops->set_selfpowered(gadget, 1);
 }
 
-/**
- * usb_gadget_clear_selfpowered - clear the device selfpowered feature.
- * @gadget:the device being declared as bus-powered
- *
- * this affects the device status reported by the hardware driver.
- * some hardware may not support bus-powered otg-only devices.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_clear_selfpowered(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->set_selfpowered)
@@ -402,15 +284,6 @@ static inline int usb_gadget_clear_selfpowered(struct usb_gadget *gadget)
 	return gadget->ops->set_selfpowered(gadget, 0);
 }
 
-/**
- * usb_gadget_vbus_connect - Notify controller that VBUS is powered
- * @gadget:The device which now has VBUS power.
- *
- * This call is used by a driver for an external transceiver (or GPIO)
- * that detects a VBUS power session starting.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_vbus_connect(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->vbus_session)
@@ -418,16 +291,6 @@ static inline int usb_gadget_vbus_connect(struct usb_gadget *gadget)
 	return gadget->ops->vbus_session(gadget, 1);
 }
 
-/**
- * usb_gadget_vbus_draw - constrain controller's VBUS power usage
- * @gadget:The device whose VBUS usage is being described
- * @mA:How much current to draw
- *
- * This call is used by gadget drivers during SET_CONFIGURATION calls,
- * reporting how much power the device may consume.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_vbus_draw(struct usb_gadget *gadget, unsigned mA)
 {
 	if (!gadget->ops->vbus_draw)
@@ -435,15 +298,6 @@ static inline int usb_gadget_vbus_draw(struct usb_gadget *gadget, unsigned mA)
 	return gadget->ops->vbus_draw(gadget, mA);
 }
 
-/**
- * usb_gadget_vbus_disconnect - notify controller about VBUS session end
- * @gadget:the device whose VBUS supply is being described
- *
- * This call is used by a driver for an external transceiver (or GPIO)
- * that detects a VBUS power session ending.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_vbus_disconnect(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->vbus_session)
@@ -451,15 +305,6 @@ static inline int usb_gadget_vbus_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->vbus_session(gadget, 0);
 }
 
-/**
- * usb_gadget_connect - software-controlled connect to USB host
- * @gadget:the peripheral being connected
- *
- * Enables the D+ (or D-) pullup, which lets the host conclude that a
- * USB device (a usb "gadget") is connected.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_connect(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->pullup)
@@ -467,15 +312,6 @@ static inline int usb_gadget_connect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 1);
 }
 
-/**
- * usb_gadget_disconnect - software-controlled disconnect from USB host
- * @gadget:the peripheral being disconnected
- *
- * Disables the D+ (or D-) pullup, which lets the host conclude that a
- * USB device (a usb "gadget") is disconnected.
- *
- * returns zero on success, else negative errno.
- */
 static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 {
 	if (!gadget->ops->pullup)
@@ -483,11 +319,6 @@ static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 0);
 }
 
-/**
- * usb_gadget_set_state() - update USB-Gadget connection state
- * @gadget: gadget object
- * @state: new state to set
- */
 void usb_gadget_set_state(struct usb_gadget *gadget,
 		enum usb_device_state state);
 
@@ -511,19 +342,14 @@ struct usb_gadget_driver {
 
 /* ----------------------------------------------------------------------- */
 
-/* driver modules register and unregister, as usual.
- * these calls must be made in a context that can sleep.
- */
 int usb_gadget_register_driver(struct usb_gadget_driver *driver);
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver);
 
-/* utility to simplify map/unmap of usb_requests to/from DMA */
 extern int usb_gadget_map_request(struct usb_gadget *gadget,
 		struct usb_request *req, int is_in);
 extern void usb_gadget_unmap_request(struct usb_gadget *gadget,
 		struct usb_request *req, int is_in);
 
-/* utility to set the device state */
 int usb_gadget_probe_driver(struct usb_gadget_driver *driver);
 
 /* ----------------------------------------------------------------------- */
