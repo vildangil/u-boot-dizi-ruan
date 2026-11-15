@@ -1,0 +1,32 @@
+name: Build U-Boot for Dizi (SM7435)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Configure U-Boot
+        run: |
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output qcom_defconfig
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output qcom-phone.config
+          # Подключаем наш кастомный defconfig
+          cp configs/dizi_defconfig .output/.config
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output olddefconfig
+
+      - name: Build U-Boot
+        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: u-boot-dizi
+          path: .output/u-boot.img
