@@ -81,6 +81,11 @@
 				compatible = "snps,dwc3";
 				reg = <0xa600000 0x10000>;
 				interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+				
+				/* ОТКЛЮЧАЕМ ПРОБЛЕМНОЕ УПРАВЛЕНИЕ ПИТАНИЕМ */
+				snps,dis_u2_susphy_quirk;
+				snps,dis_u3_susphy_quirk;
+				snps,dis_enblslpm_quirk;
 			};
 		};
 
