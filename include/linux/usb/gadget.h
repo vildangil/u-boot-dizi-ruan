@@ -13,14 +13,33 @@
 #include <linux/types.h>
 #include <linux/list.h>
 #include <linux/usb/ch9.h>
-/* #include <linux/usb/ch11.h> */  /* УДАЛЕНО: Файла нет в вашей версии U-Boot */
+#include <linux/kernel.h>
+#include <linux/device.h>
+#include <linux/workqueue.h>
 
 struct usb_ep;
 
 /**
+ * struct usb_ep_caps - endpoint capabilities description
+ * @type_control: Endpoint supports control type
+ * @type_iso: Endpoint supports isochronous type
+ * @type_bulk: Endpoint supports bulk type
+ * @type_int: Endpoint supports interrupt type
+ * @dir_in: Endpoint supports IN direction
+ * @dir_out: Endpoint supports OUT direction
+ */
+struct usb_ep_caps {
+	unsigned type_control:1;
+	unsigned type_iso:1;
+	unsigned type_bulk:1;
+	unsigned type_int:1;
+	unsigned dir_in:1;
+	unsigned dir_out:1;
+};
+
+/**
  * struct usb_request - describes one i/o request
- * @buf: Buffer used for data.  Always provide this; some controllers
- *	only use PIO, or don't use this for some transfers.
+ * @buf: Buffer used for data.
  * @dma: DMA address for bulk/intr endpoints.
  * @length: Length of that data
  * @stream_id: The stream id, when USB3.0 bulk streams are being used
@@ -30,8 +49,7 @@ struct usb_ep;
  *	the transfer.
  * @short_not_ok: When read, causes a host controller to use
  *	short reads to terminate the transfer.
- * @complete: Completion handler. This requests that the driver
- *	return the completed request to the gadget driver.
+ * @complete: Completion handler.
  * @context: For use by the completion handler.
  * @list: For use by the host controller driver.
  * @status: For use by the host controller driver.
@@ -58,10 +76,6 @@ struct usb_request {
 
 /* ----------------------------------------------------------------------- */
 
-/* endpoint-specific parts of the api to the usb controller hardware.
- * unlike the urb model, (de)multiplexing is not explicitly modelled,
- * request pickup and completion is basic.
- */
 struct usb_ep_ops {
 	int (*enable) (struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc);
@@ -150,6 +164,9 @@ struct usb_dcd_config_params {
 	__u8  bMaxBurst;
 	__le16 wMaxPacketSize;
 };
+
+struct usb_gadget;
+struct usb_gadget_driver;
 
 /**
  * struct usb_gadget_ops - operations provided by a USB Device Controller
