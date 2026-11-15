@@ -30,6 +30,14 @@
 			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <19200000>;
+		};
+	};
+
 	vdd_usb: regulator-0 {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_usb";
@@ -67,6 +75,8 @@
 			phy-names = "usb2-phy";
 			dr_mode = "peripheral";
 			maximum-speed = "high-speed";
+			clocks = <&xo_board>;
+			clock-names = "ref";
 		};
 
 		usb_1_hsphy: phy@88e2000 {
@@ -74,6 +84,10 @@
 			reg = <0x88e2000 0x200>;
 			#phy-cells = <0>;
 			vdd-supply = <&vdd_usb>;
+			vdda-pll-supply = <&vdd_usb>;
+			vdda-phy-dpdm-supply = <&vdd_usb>;
+			clocks = <&xo_board>;
+			clock-names = "ref";
 		};
 	};
 };
