@@ -1,8 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0+
-/*
- * Device Tree Source for Xiaomi Redmi Pad Pro (dizi)
- */
-
 /dts-v1/;
 
 #include "sm7435.dtsi"
@@ -12,13 +8,11 @@
 	compatible = "xiaomi,dizi", "qcom,sm7435";
 
 	chosen {
-		/* Указываем U-Boot, куда выводить консоль */
-		stdout-path = &{/soc@0/geniqup@9c0000/serial@998000};
+		stdout-path = &{/soc@0/serial@998000};
 	};
 
-	/* Заглушка для памяти, чтобы U-Boot мог загрузиться */
 	memory@80000000 {
 		device_type = "memory";
-		reg = <0x0 0x80000000 0x0 0x40000000>; /* 1GB, нужно будет уточнить */
+		reg = <0x0 0x80000000 0x0 0x40000000>; /* 1GB */
 	};
 };
