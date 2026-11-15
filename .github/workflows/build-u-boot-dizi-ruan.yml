@@ -17,6 +17,9 @@ jobs:
       - name: Configure U-Boot
         run: |
           make CROSS_COMPILE=aarch64-linux-gnu- O=.output dizi_defconfig
+          ./scripts/config --file .output/.config -e OF_LIVE
+          ./scripts/config --file .output/.config -e OF_BOARD_SETUP
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output olddefconfig
 
       - name: Build U-Boot
         run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
