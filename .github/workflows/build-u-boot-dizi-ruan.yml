@@ -14,17 +14,16 @@ jobs:
 
       - name: Configure U-Boot
         run: |
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output qcom_defconfig
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output qcom-phone.config
-          # Подключаем наш кастомный defconfig
-          cp configs/dizi_defconfig .output/.config
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output olddefconfig
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm64 dizi_defconfig
 
       - name: Build U-Boot
-        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
+        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output ARCH=arm64 -j$(nproc)
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: u-boot-dizi
-          path: .output/u-boot.img
+          path: |
+            .output/u-boot.img
+            .output/u-boot.bin
+            .output/u-boot
