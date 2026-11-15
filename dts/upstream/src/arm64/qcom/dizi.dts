@@ -9,6 +9,7 @@
 
 	chosen {
 		stdout-path = &uart0;
+		serial-number = "dizi12345678";
 	};
 
 	memory@80000000 {
