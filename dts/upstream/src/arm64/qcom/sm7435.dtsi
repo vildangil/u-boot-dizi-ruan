@@ -50,5 +50,20 @@
 			clock-frequency = <7372800>;
 			status = "okay";
 		};
+
+		usb_1_dwc3: usb@a600000 {
+			compatible = "snps,dwc3";
+			reg = <0xa600000 0x10000>;
+			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usb_1_hsphy>;
+			phy-names = "usb2-phy";
+			dr_mode = "peripheral";
+		};
+
+		usb_1_hsphy: phy@88e2000 {
+			compatible = "qcom,usb-snps-femto-v2-phy";
+			reg = <0x88e2000 0x200>;
+			#phy-cells = <0>;
+		};
 	};
 };
