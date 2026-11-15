@@ -29,12 +29,14 @@ CONFIG_CLK_QCOM=y
 CONFIG_PINCTRL=y
 CONFIG_PINCTRL_QCOM=y
 
-# ЭКРАН (КРИТИЧЕСКИ ВАЖНО)
+# WATCHDOG (Чтобы планшет не перезагружался)
+CONFIG_WDT=y
+CONFIG_WDT_QCOM=y
+
+# ЭКРАН
 CONFIG_VIDEO=y
 CONFIG_DM_VIDEO=y
 CONFIG_VIDEO_SIMPLE=y
-CONFIG_BACKLIGHT=y
-CONFIG_DM_PWM=y
 
 # USB и Fastboot
 CONFIG_DM_USB_GADGET=y
