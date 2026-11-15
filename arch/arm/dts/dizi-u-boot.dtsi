@@ -1,29 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0+
-/*
- * U-Boot specific device tree changes for Xiaomi Redmi Pad Pro (dizi)
- */
 
 / {
-	/*
-	 * Узел simple-framebuffer для вывода логов на экран.
-	 * Пока оставляем его закомментированным, так как для него 
-	 * нужен регион памяти (cont_splash_mem), которого нет в базовом DTS.
-	 * Включим позже, когда добавим описание памяти.
-	 */
-	// simple-framebuffer {
-	//	compatible = "simple-framebuffer";
-	//	memory-region = <&cont_splash_mem>;
-	//	width = <1600>;
-	//	height = <2560>;
-	//	stride = <(1600 * 4)>;
-	//	format = "a8r8g8b8";
-	// };
-};
+	/* Резервируем кусок памяти под экран */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
 
-/*
- * Узел USB также пока закомментирован, так как в нашем 
- * минимальном sm7435.dtsi нет описания контроллера usb_1_dwc3.
- */
-// &usb_1_dwc3 {
-//	dr_mode = "peripheral";
-// };
+		framebuffer_reserved: framebuffer@9d400000 {
+			reg = <0x0 0x9d400000 0x0 0x1000000>; /* 16MB */
+			no-map;
+		};
+	};
+
+	/* Принудительный вывод картинки */
+	simple-framebuffer {
+		compatible = "simple-framebuffer";
+		memory-region = <&framebuffer_reserved>;
+		width = <1600>;
+		height = <2560>;
+		stride = <(1600 * 4)>;
+		format = "a8r8g8b8";
+	};
+};
