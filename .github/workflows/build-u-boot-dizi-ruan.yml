@@ -13,19 +13,33 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu libgnutls28-dev
+          pip install mkbootimg
 
       - name: Configure U-Boot
         run: |
           make CROSS_COMPILE=aarch64-linux-gnu- O=.output dizi_defconfig
 
-      - name: Build U-Boot Image
-        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc) u-boot.img
+      - name: Build U-Boot
+        run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
+
+      - name: Create Android Boot Image
+        run: |
+          dd if=/dev/zero of=empty_ramdisk bs=1 count=0
+          mkbootimg --kernel .output/u-boot.bin \
+                    --ramdisk empty_ramdisk \
+                    --cmdline "console=ttyMSM0,115200n8" \
+                    --base 0x80000000 \
+                    --kernel_offset 0x00000000 \
+                    --ramdisk_offset 0x01000000 \
+                    --tags_offset 0x00000100 \
+                    --pagesize 4096 \
+                    --header_version 3 \
+                    --output boot.img
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: u-boot-dizi
+          name: u-boot-dizi-boot
           path: |
-            .output/u-boot.img
+            boot.img
             .output/u-boot.bin
-            .output/u-boot
