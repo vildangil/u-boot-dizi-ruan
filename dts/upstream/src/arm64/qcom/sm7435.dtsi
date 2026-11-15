@@ -67,10 +67,11 @@
 			status = "okay";
 		};
 
-		/* Родительский узел (Wrapper) для USB */
 		usb_1: usb@a6f8800 {
 			compatible = "qcom,snps-dwc3";
 			reg = <0xa6f8800 0x1000>;
+			#address-cells = <1>; /* ДОБАВЛЕНО */
+			#size-cells = <1>;    /* ДОБАВЛЕНО */
 			clocks = <&xo_board>;
 			clock-names = "core";
 			phys = <&usb_1_hsphy>;
@@ -82,7 +83,6 @@
 				reg = <0xa600000 0x10000>;
 				interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
 				
-				/* ОТКЛЮЧАЕМ ПРОБЛЕМНОЕ УПРАВЛЕНИЕ ПИТАНИЕМ */
 				snps,dis_u2_susphy_quirk;
 				snps,dis_u3_susphy_quirk;
 				snps,dis_enblslpm_quirk;
