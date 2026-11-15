@@ -3,26 +3,22 @@
  * udc-core.c - Core UDC Framework
  *
  * Copyright (C) 2015 Texas Instruments Incorporated - https://www.ti.com
- *
  * Author: Felipe Balbi <balbi@ti.com>
  *
  * Taken from Linux Kernel v3.19-rc1 (drivers/usb/gadget/udc-core.c) and ported
  * to uboot.
  *
  * commit 02e8c96627 : usb: gadget: udc: core: prepend udc_attach_driver with
- *		       usb_
+ * usb_
  */
 
-#include <dm/device_compat.h>
-#include <dm/devres.h>
-#include <linux/compat.h>
-#include <malloc.h>
-#include <asm/cache.h>
-#include <linux/dma-mapping.h>
+#include <common.h>
 #include <dm.h>
-#include <dm/device-internal.h>
-#include <linux/usb/ch9.h>
+#include <log.h>
+#include <malloc.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/ch9.h>
+#include <linux/list.h>
 
 /**
  * struct usb_udc - describes one usb device controller
@@ -103,8 +99,8 @@ EXPORT_SYMBOL_GPL(usb_gadget_set_state);
  * @gadget: The gadget which bus reset occurs
  * @driver: The gadget driver we want to notify
  *
- * If the udc driver has bus reset handler, it needs to call this when the bus
- * reset occurs, it notifies the gadget driver that the bus reset occurs as
+ * If the udc driver has bus reset handler, it needs to call this when the
+ * bus reset occurs, it notifies the gadget driver that the bus reset occurs as
  * well as updates gadget state.
  */
 void usb_gadget_udc_reset(struct usb_gadget *gadget,
@@ -177,8 +173,8 @@ static void usb_udc_release(struct device *dev)
 int usb_add_gadget_udc_release(struct device *parent, struct usb_gadget *gadget,
 		void (*release)(struct device *dev))
 {
-	struct usb_udc		*udc;
-	int			ret = -ENOMEM;
+	struct usb_udc *udc;
+	int ret = -ENOMEM;
 
 	udc = kzalloc(sizeof(*udc), GFP_KERNEL);
 	if (!udc)
@@ -190,18 +186,14 @@ int usb_add_gadget_udc_release(struct device *parent, struct usb_gadget *gadget,
 	udc->dev.release = usb_udc_release;
 	udc->dev.class = udc_class;
 	udc->dev.parent = parent;
-
 	udc->gadget = gadget;
 
 	mutex_lock(&udc_lock);
 	list_add_tail(&udc->list, &udc_list);
-
 	usb_gadget_set_state(gadget, USB_STATE_NOTATTACHED);
-
 	mutex_unlock(&udc_lock);
 
 	return 0;
-
 err1:
 	return ret;
 }
@@ -219,18 +211,43 @@ int usb_add_gadget_udc(struct device *parent, struct usb_gadget *gadget)
 {
 	return usb_add_gadget_udc_release(parent, gadget, NULL);
 }
-EXPORT_SYMBOL_GPL(usb_add_gadget_udc);
+
+/**
+ * usb_gadget_enable_async_callbacks - tell usb device controller to enable
+ * asynchronous callbacks
+ * @udc: The UDC which should enable async callbacks
+ */
+static inline void usb_gadget_enable_async_callbacks(struct usb_udc *udc)
+{
+	struct usb_gadget *gadget = udc->gadget;
+
+	if (gadget->ops->udc_async_callbacks)
+		gadget->ops->udc_async_callbacks(gadget, true);
+}
+
+/**
+ * usb_gadget_disable_async_callbacks - tell usb device controller to disable
+ * asynchronous callbacks
+ * @udc: The UDC which should disable async callbacks
+ */
+static inline void usb_gadget_disable_async_callbacks(struct usb_udc *udc)
+{
+	struct usb_gadget *gadget = udc->gadget;
+
+	if (gadget->ops->udc_async_callbacks)
+		gadget->ops->udc_async_callbacks(gadget, false);
+}
 
 static void usb_gadget_remove_driver(struct usb_udc *udc)
 {
 	dev_dbg(&udc->dev, "unregistering UDC driver [%s]\n",
 			udc->driver->function);
 
+	usb_gadget_disable_async_callbacks(udc);
 	usb_gadget_disconnect(udc->gadget);
 	udc->driver->disconnect(udc->gadget);
 	udc->driver->unbind(udc->gadget);
 	usb_gadget_udc_stop(udc);
-
 	udc->driver = NULL;
 }
 
@@ -243,7 +260,7 @@ static void usb_gadget_remove_driver(struct usb_udc *udc)
  */
 void usb_del_gadget_udc(struct usb_gadget *gadget)
 {
-	struct usb_udc		*udc = NULL;
+	struct usb_udc *udc = NULL;
 
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list)
@@ -257,7 +274,6 @@ void usb_del_gadget_udc(struct usb_gadget *gadget)
 
 found:
 	dev_vdbg(gadget->dev.parent, "unregistering gadget\n");
-
 	list_del(&udc->list);
 	mutex_unlock(&udc_lock);
 
@@ -270,7 +286,7 @@ EXPORT_SYMBOL_GPL(usb_del_gadget_udc);
 
 /**
  * usb_gadget_udc_set_speed - tells usb device controller speed supported by
- *    current driver
+ * current driver
  * @udc: The device we want to set maximum speed
  * @speed: The maximum speed to allowed to run
  *
@@ -289,7 +305,8 @@ static inline void usb_gadget_udc_set_speed(struct usb_udc *udc,
 	}
 }
 
-static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *driver)
+static int udc_bind_to_driver(struct usb_udc *udc,
+		struct usb_gadget_driver *driver)
 {
 	int ret;
 
@@ -297,7 +314,6 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
 			driver->function);
 
 	udc->driver = driver;
-
 	usb_gadget_udc_set_speed(udc, driver->speed);
 
 	ret = driver->bind(udc->gadget);
@@ -308,9 +324,11 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
 		driver->unbind(udc->gadget);
 		goto err1;
 	}
-	usb_gadget_connect(udc->gadget);
 
+	usb_gadget_enable_async_callbacks(udc);
+	usb_gadget_connect(udc->gadget);
 	return 0;
+
 err1:
 	if (ret != -EISNAM)
 		dev_err(&udc->dev, "failed to start %s: %d\n",
@@ -331,7 +349,6 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	mutex_lock(&udc_lock);
 	list_for_each_entry(udc, &udc_list, list) {
 		udc_count++;
-
 		/* For now we take the first one */
 		if (!udc->driver)
 			goto found;
@@ -340,14 +357,17 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	if (!udc_count)
 		printf("No UDC available in the system\n");
 	else
-		/* When this happens, users should 'unbind <class> <index>'
+		/*
+		 * When this happens, users should 'unbind <class> <index>'
 		 * using the output of 'dm tree' and looking at the line right
 		 * after the USB peripheral/device controller.
 		 */
 		printf("All UDCs in use (%d available), use the unbind command\n",
 		       udc_count);
+
 	mutex_unlock(&udc_lock);
 	return -ENODEV;
+
 found:
 	ret = udc_bind_to_driver(udc, driver);
 	mutex_unlock(&udc_lock);
@@ -374,7 +394,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 		if (udc->driver == driver) {
 			usb_gadget_remove_driver(udc);
 			usb_gadget_set_state(udc->gadget,
-					USB_STATE_NOTATTACHED);
+					     USB_STATE_NOTATTACHED);
 			ret = 0;
 			break;
 		}
@@ -383,7 +403,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(usb_gadget_unregister_driver);
-
 MODULE_DESCRIPTION("UDC Framework");
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
 MODULE_LICENSE("GPL v2");
