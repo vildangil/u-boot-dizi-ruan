@@ -4,26 +4,26 @@
  */
 
 / {
-	chosen {
-		/* Указываем U-Boot, где искать консоль и как её использовать */
-		stdout-path = &{/soc@0/geniqup@9c0000/serial@998000};
-	};
-
 	/*
 	 * Узел simple-framebuffer для вывода логов на экран.
-	 * Это критически важно для отладки без UART[reference:3].
+	 * Пока оставляем его закомментированным, так как для него 
+	 * нужен регион памяти (cont_splash_mem), которого нет в базовом DTS.
+	 * Включим позже, когда добавим описание памяти.
 	 */
-	simple-framebuffer {
-		compatible = "simple-framebuffer";
-		memory-region = <&cont_splash_mem>;
-		width = <1600>;
-		height = <2560>;
-		stride = <(1600 * 4)>;
-		format = "a8r8g8b8";
-	};
+	// simple-framebuffer {
+	//	compatible = "simple-framebuffer";
+	//	memory-region = <&cont_splash_mem>;
+	//	width = <1600>;
+	//	height = <2560>;
+	//	stride = <(1600 * 4)>;
+	//	format = "a8r8g8b8";
+	// };
 };
 
-/* Пример добавления свойства для USB, если потребуется */
-&usb_1_dwc3 {
-	dr_mode = "peripheral";
-};
+/*
+ * Узел USB также пока закомментирован, так как в нашем 
+ * минимальном sm7435.dtsi нет описания контроллера usb_1_dwc3.
+ */
+// &usb_1_dwc3 {
+//	dr_mode = "peripheral";
+// };
