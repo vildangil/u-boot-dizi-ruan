@@ -30,6 +30,22 @@
 			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	clocks {
+		xo_board: xo-board {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <19200000>;
+		};
+	};
+
+	vdd_usb: regulator-0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_usb";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
 	soc@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -51,13 +67,32 @@
 			status = "okay";
 		};
 
-		usb_1_dwc3: usb@a600000 {
-			compatible = "snps,dwc3";
-			reg = <0xa600000 0x10000>;
-			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
-			/* УБРАНЫ PHY И КЛОКИ, ЧТОБЫ НЕ ЖДАТЬ ТАЙМАУТА */
+		/* Родительский узел (Wrapper) для USB */
+		usb_1: usb@a6f8800 {
+			compatible = "qcom,snps-dwc3";
+			reg = <0xa6f8800 0x1000>;
+			clocks = <&xo_board>;
+			clock-names = "core";
+			phys = <&usb_1_hsphy>;
+			phy-names = "usb2-phy";
 			dr_mode = "peripheral";
-			maximum-speed = "high-speed";
+
+			usb_1_dwc3: usb@a600000 {
+				compatible = "snps,dwc3";
+				reg = <0xa600000 0x10000>;
+				interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		usb_1_hsphy: phy@88e2000 {
+			compatible = "qcom,usb-snps-femto-v2-phy";
+			reg = <0x88e2000 0x200>;
+			#phy-cells = <0>;
+			vdd-supply = <&vdd_usb>;
+			vdda-pll-supply = <&vdd_usb>;
+			vdda-phy-dpdm-supply = <&vdd_usb>;
+			clocks = <&xo_board>;
+			clock-names = "ref";
 		};
 	};
 };
