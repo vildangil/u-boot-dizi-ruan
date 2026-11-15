@@ -30,6 +30,14 @@
 			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	vdd_usb: regulator-0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_usb";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
 	soc@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -58,12 +66,14 @@
 			phys = <&usb_1_hsphy>;
 			phy-names = "usb2-phy";
 			dr_mode = "peripheral";
+			maximum-speed = "high-speed";
 		};
 
 		usb_1_hsphy: phy@88e2000 {
 			compatible = "qcom,usb-snps-femto-v2-phy";
 			reg = <0x88e2000 0x200>;
 			#phy-cells = <0>;
+			vdd-supply = <&vdd_usb>;
 		};
 	};
 };
