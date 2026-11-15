@@ -8,7 +8,7 @@
 	compatible = "xiaomi,dizi", "qcom,sm7435";
 
 	chosen {
-		stdout-path = &{/soc@0/serial@998000};
+		stdout-path = &uart0;
 	};
 
 	memory@80000000 {
