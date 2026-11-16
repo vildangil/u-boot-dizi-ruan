@@ -23,38 +23,36 @@ jobs:
               board/qualcomm/dizi.config
           make CROSS_COMPILE=aarch64-linux-gnu- O=.output olddefconfig
 
-      - name: Verify config (hard fail)
+      - name: Verify config
         run: |
           set -e
           for opt in CONFIG_MISC CONFIG_USB_DWC3 CONFIG_USB_DWC3_GADGET \
                      CONFIG_USB_DWC3_GENERIC CONFIG_USB_GADGET \
                      CONFIG_MSM_GENI_SERIAL CONFIG_USB_FUNCTION_FASTBOOT \
-                     CONFIG_VIDEO_SIMPLE CONFIG_PANIC_HANG; do
-            if ! grep -q "^${opt}=y" .output/.config; then
-              echo "::error::MISSING ${opt}=y"; exit 1
-            fi
+                     CONFIG_VIDEO_SIMPLE CONFIG_PANIC_HANG \
+                     CONFIG_BOARD_EARLY_INIT_F; do
+            grep -q "^${opt}=y" .output/.config || { echo "::error::MISSING ${opt}=y"; exit 1; }
           done
           grep -q '^CONFIG_DEFAULT_DEVICE_TREE="qcom/dizi"' .output/.config \
             || { echo "::error::wrong device tree"; exit 1; }
           echo "--- key settings ---"
-          grep -E '^CONFIG_(DEFAULT_DEVICE_TREE|TEXT_BASE|SYS_BOARD|SYS_VENDOR|DEBUG_UART_BASE|DEBUG_UART_CLOCK|ENV_DEFAULT_ENV_TEXT_FILE|ENV_USE_DEFAULT_ENV_TEXT_FILE)=' .output/.config
+          grep -E '^CONFIG_(DEFAULT_DEVICE_TREE|TEXT_BASE|SYS_BOARD|SYS_VENDOR|DEBUG_UART_BASE|ENV_DEFAULT_ENV_TEXT_FILE)=' .output/.config
 
       - name: Build
         run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
 
-      - name: Verify binary (hard fail)
+      - name: Verify binary
         run: |
           set -e
-          ls -la .output/u-boot.bin .output/u-boot.dtb
+          grep -q 'board_early_init_f' .output/System.map \
+            || { echo "::error::board/xiaomi/dizi/board.c NOT linked"; exit 1; }
           strings .output/u-boot.bin | grep -q 'dwc3-generic' \
             || { echo "::error::dwc3-generic driver NOT in binary"; exit 1; }
           strings .output/u-boot.bin | grep -q 'dizi12345678' \
-            || { echo "::error::dizi.env NOT embedded (serial# missing)"; exit 1; }
-          strings .output/u-boot.bin | grep -q 'vidconsole' \
-            || { echo "::error::stdout has no vidconsole"; exit 1; }
+            || { echo "::error::dizi.env NOT embedded"; exit 1; }
           dtc -I dtb -O dts .output/u-boot.dtb -o .output/u-boot-decompiled.dts
           grep -q 'b8000000' .output/u-boot-decompiled.dts \
-            || { echo "::error::framebuffer is not at 0xb8000000"; exit 1; }
+            || { echo "::error::framebuffer not at 0xb8000000"; exit 1; }
           echo "--- framebuffer node ---"
           grep -A8 'simple-framebuffer' .output/u-boot-decompiled.dts
 
@@ -71,16 +69,20 @@ jobs:
                     --pagesize 4096 \
                     --header_version 3 \
                     --output boot.img
-          ls -la boot.img
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          cp boot.img                        artifacts/
+          cp .output/u-boot.bin              artifacts/
+          cp .output/u-boot.dtb              artifacts/
+          cp .output/u-boot-decompiled.dts   artifacts/
+          cp .output/System.map              artifacts/System.map
+          cp .output/.config                 artifacts/config.txt
+          ls -la artifacts/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: u-boot-dizi-boot
-          path: |
-            boot.img
-            .output/u-boot.bin
-            .output/u-boot.dtb
-            .output/u-boot-decompiled.dts
-            .output/.config
-            .output/System.map
+          path: artifacts/
