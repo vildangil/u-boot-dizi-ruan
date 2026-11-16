@@ -25,8 +25,9 @@ int board_early_init_f(void)
 		for (i = 0; i < n; i++)
 			fb[i] = 0x00ff00ff;	/* малиновый */
 
-	/* наблюдаемый маркер, не зависящий от экрана */
-	arm_smccc_smc(PSCI_0_2_FN_SYSTEM_RESET, 0, 0, 0, 0, 0, 0, &res);
+	/* PSCI SYSTEM_RESET = 0x84000009; a0..a7 + res */
+	arm_smccc_smc(PSCI_0_2_FN_SYSTEM_RESET,
+		      0, 0, 0, 0, 0, 0, 0, &res);
 
 	while (1)
 		;
