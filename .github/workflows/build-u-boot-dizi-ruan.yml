@@ -2,6 +2,8 @@ name: Build U-Boot for Dizi (SM7435)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -9,17 +11,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install cross-compiler and dependencies
+      - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu libgnutls28-dev mkbootimg
+          sudo apt-get install -y gcc-aarch64-linux-gnu libgnutls28-dev \
+                                  bison flex device-tree-compiler mkbootimg
 
-      - name: Configure U-Boot
+      - name: Configure (qcom_defconfig + phone + dizi)
         run: |
-          make CROSS_COMPILE=aarch64-linux-gnu- O=.output dizi_defconfig
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output qcom_defconfig
+          ./scripts/kconfig/merge_config.sh -m -O .output .output/.config \
+              board/qualcomm/qcom-phone.config \
+              board/qualcomm/dizi.config
+          make CROSS_COMPILE=aarch64-linux-gnu- O=.output olddefconfig
 
-      - name: Build U-Boot
+      - name: Verify config (hard fail)
+        run: |
+          set -e
+          for opt in CONFIG_MISC CONFIG_USB_DWC3 CONFIG_USB_DWC3_GADGET \
+                     CONFIG_USB_DWC3_GENERIC CONFIG_USB_GADGET \
+                     CONFIG_MSM_GENI_SERIAL CONFIG_USB_FUNCTION_FASTBOOT \
+                     CONFIG_VIDEO_SIMPLE CONFIG_PANIC_HANG; do
+            if ! grep -q "^${opt}=y" .output/.config; then
+              echo "::error::MISSING ${opt}=y"; exit 1
+            fi
+          done
+          grep -q '^CONFIG_DEFAULT_DEVICE_TREE="qcom/dizi"' .output/.config \
+            || { echo "::error::wrong device tree"; exit 1; }
+          echo "--- key settings ---"
+          grep -E '^CONFIG_(DEFAULT_DEVICE_TREE|TEXT_BASE|SYS_BOARD|SYS_VENDOR|DEBUG_UART_BASE|DEBUG_UART_CLOCK|ENV_DEFAULT_ENV_TEXT_FILE|ENV_USE_DEFAULT_ENV_TEXT_FILE)=' .output/.config
+
+      - name: Build
         run: make CROSS_COMPILE=aarch64-linux-gnu- O=.output -j$(nproc)
+
+      - name: Verify binary (hard fail)
+        run: |
+          set -e
+          ls -la .output/u-boot.bin .output/u-boot.dtb
+          strings .output/u-boot.bin | grep -q 'dwc3-generic' \
+            || { echo "::error::dwc3-generic driver NOT in binary"; exit 1; }
+          strings .output/u-boot.bin | grep -q 'dizi12345678' \
+            || { echo "::error::dizi.env NOT embedded (serial# missing)"; exit 1; }
+          strings .output/u-boot.bin | grep -q 'vidconsole' \
+            || { echo "::error::stdout has no vidconsole"; exit 1; }
+          dtc -I dtb -O dts .output/u-boot.dtb -o .output/u-boot-decompiled.dts
+          grep -q 'b8000000' .output/u-boot-decompiled.dts \
+            || { echo "::error::framebuffer is not at 0xb8000000"; exit 1; }
+          echo "--- framebuffer node ---"
+          grep -A8 'simple-framebuffer' .output/u-boot-decompiled.dts
 
       - name: Create Android Boot Image
         run: |
@@ -34,6 +73,7 @@ jobs:
                     --pagesize 4096 \
                     --header_version 3 \
                     --output boot.img
+          ls -la boot.img
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -42,3 +82,7 @@ jobs:
           path: |
             boot.img
             .output/u-boot.bin
+            .output/u-boot.dtb
+            .output/u-boot-decompiled.dts
+            .output/.config
+            .output/System.map
