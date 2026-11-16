@@ -4,16 +4,20 @@
 #include "sm7435.dtsi"
 
 / {
-	model = "Xiaomi Redmi Pad Pro";
-	compatible = "xiaomi,dizi", "qcom,sm7435";
+	model = "Xiaomi Redmi Pad Pro / POCO Pad";
+	compatible = "xiaomi,dizi", "qcom,sm7435", "qcom,parrot";
 
-	chosen {
-		stdout-path = &uart0;
-		serial-number = "dizi12345678";
+	aliases {
+		serial0 = &uart0;
 	};
 
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	/* DDR region0 из ABL DTB (то же, что использует UniXNU, проверено на железе) */
 	memory@80000000 {
 		device_type = "memory";
-		reg = <0x0 0x80000000 0x0 0x40000000>; /* 1GB */
+		reg = <0x0 0x80000000 0x0 0x80000000>;	/* 2 GiB */
 	};
 };
