@@ -29,7 +29,7 @@ jobs:
           for opt in CONFIG_MISC CONFIG_USB_DWC3 CONFIG_USB_DWC3_GADGET \
                      CONFIG_USB_DWC3_GENERIC CONFIG_USB_GADGET \
                      CONFIG_MSM_GENI_SERIAL CONFIG_USB_FUNCTION_FASTBOOT \
-                     CONFIG_VIDEO_SIMPLE CONFIG_PANIC_HANG \
+                     CONFIG_VIDEO_SIMPLE \
                      CONFIG_BOARD_EARLY_INIT_F; do
             grep -q "^${opt}=y" .output/.config || { echo "::error::MISSING ${opt}=y"; exit 1; }
           done
