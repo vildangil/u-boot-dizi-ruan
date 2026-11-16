@@ -1,4 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0+
+/*
+ * Qualcomm SM7435 (parrot), Snapdragon 7s Gen 2.
+ * Общий для dizi и ruan.
+ *
+ * Адреса сверены с ABL DTB: Mu-Silicium/Resources/DTBs/dizi.dts
+ * и с UniXNU-sm7435-common/dts/sm7435.dtsi (parrot.dtsi).
+ */
+
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -9,6 +17,7 @@
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
+
 		CPU0: cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,armv8";
@@ -24,10 +33,12 @@
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>,
-			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW)>;
+		clock-frequency = <19200000>;
+		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 14 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 12 IRQ_TYPE_LEVEL_LOW>;
+		always-on;
 	};
 
 	clocks {
@@ -38,7 +49,7 @@
 		};
 	};
 
-	vdd_usb: regulator-0 {
+	vdd_usb: regulator-usb {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_usb";
 		regulator-min-microvolt = <3300000>;
@@ -46,64 +57,80 @@
 		regulator-always-on;
 	};
 
-	soc@0 {
+	soc: soc@0 {
+		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "simple-bus";
-		ranges = <0 0 0 0xffffffff>;
+		ranges = <0x0 0x0 0x0 0xffffffff>;
 
-		intc: interrupt-controller@17a00000 {
+		intc: interrupt-controller@17200000 {
 			compatible = "arm,gic-v3";
 			#interrupt-cells = <3>;
 			interrupt-controller;
-			reg = <0x17a00000 0x10000>,
-			      <0x17b00000 0x100000>;
+			#redistributor-regions = <1>;
+			redistributor-stride = <0x0 0x20000>;
+			reg = <0x17200000 0x10000>,
+			      <0x17260000 0x100000>;
 		};
 
-		uart0: serial@998000 {
+		/* ABL: qcom,qup_uart@98c000 / "qcom,msm-geni-console" */
+		uart0: serial@98c000 {
 			compatible = "qcom,geni-debug-uart";
-			reg = <0x998000 0x4000>;
+			reg = <0x98c000 0x4000>;
 			clock-frequency = <7372800>;
 			status = "okay";
 		};
 
-		watchdog@f410000 {
+		/* ABL: qcom,wdt@17410000. Драйвер U-Boot другой — держим выключенным. */
+		watchdog@17410000 {
 			compatible = "qcom,kpss-wdt";
-			reg = <0xf410000 0x1000>;
+			reg = <0x17410000 0x1000>;
 			clocks = <&xo_board>;
 			timeout-sec = <60>;
+			status = "disabled";
 		};
 
-		usb_1: usb@a6f8800 {
+		/*
+		 * U-Boot: "qcom,snps-dwc3" = плоский узел, reg = база кора.
+		 * ABL: ssusb@a600000 (core_base 0xa600000/0x100000) + dwc3@a600000 (0xd800).
+		 * QSCRATCH glue считает сам: 0xa600000 + 0xf8800 = 0xa6f8800.
+		 */
+		usb_1: usb@a600000 {
 			compatible = "qcom,snps-dwc3";
-			reg = <0xa6f8800 0x1000>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			clocks = <&xo_board>;
-			clock-names = "core";
+			reg = <0xa600000 0xd800>;
+			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+
+			dr_mode = "peripheral";
+			/* в стоке super-speed (есть QMP combo @88e8000), для bring-up хватит HS */
+			maximum-speed = "high-speed";
+			qcom,select-utmi-as-pipe-clk;
+
 			phys = <&usb_1_hsphy>;
 			phy-names = "usb2-phy";
-			dr_mode = "peripheral";
 
-			usb_1_dwc3: usb@a600000 {
-				compatible = "snps,dwc3";
-				reg = <0xa600000 0x10000>;
-				interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
-				snps,dis_u2_susphy_quirk;
-				snps,dis_u3_susphy_quirk;
-				snps,dis_enblslpm_quirk;
-			};
+			snps,dis_u2_susphy_quirk;
+			snps,dis_u3_susphy_quirk;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
+			snps,dis_enblslpm_quirk;
+
+			status = "okay";
 		};
 
-		usb_1_hsphy: phy@88e2000 {
+		/* ABL: hsphy@88e3000, "qcom,usb-hsphy-snps-femto" */
+		usb_1_hsphy: phy@88e3000 {
 			compatible = "qcom,usb-snps-femto-v2-phy";
-			reg = <0x88e2000 0x200>;
+			reg = <0x88e3000 0x11c>;
 			#phy-cells = <0>;
+
 			vdd-supply = <&vdd_usb>;
 			vdda-pll-supply = <&vdd_usb>;
 			vdda-phy-dpdm-supply = <&vdd_usb>;
+
 			clocks = <&xo_board>;
 			clock-names = "ref";
+
+			status = "okay";
 		};
 	};
 };
