@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+
+#include "sm7435.dtsi"
+
+/ {
+	model = "Xiaomi Redmi Pad Pro 5G / POCO Pad 5G";
+	compatible = "xiaomi,ruan", "qcom,sm7435", "qcom,parrot";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x80000000>;
+	};
+};
