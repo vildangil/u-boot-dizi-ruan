@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0+
+/*
+ * Адрес/размер взяты из ABL DTB dizi:
+ *   splash_region { label = "cont_splash_region"; reg = <0x0 0xb8000000 0x0 0x2b00000>; }
+ * Тот же регион использует UniXNU (dts/dizi.dts).
+ */
 
 / {
 	reserved-memory {
@@ -6,15 +11,15 @@
 		#size-cells = <2>;
 		ranges;
 
-		framebuffer_reserved: framebuffer@90000000 {
-			reg = <0x0 0x90000000 0x0 0x1000000>; /* 16MB */
+		cont_splash: cont_splash_region@b8000000 {
+			reg = <0x0 0xb8000000 0x0 0x2b00000>;	/* 45 MiB */
 			no-map;
 		};
 	};
 
 	simple-framebuffer {
 		compatible = "simple-framebuffer";
-		memory-region = <&framebuffer_reserved>;
+		memory-region = <&cont_splash>;
 		width = <1600>;
 		height = <2560>;
 		stride = <(1600 * 4)>;
